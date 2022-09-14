@@ -24,19 +24,19 @@ The user can add additional tools that need to be run for a context by manually 
 
 # Usage
 
-workon.py [-h] [-l] [-c] [-a] [-v] [context name]
-
-Establish/switch project context.
-
-positional arguments:
-  context        Name of the context to load/create. This argument is required unless -l/--list or -h/--help are specified.
-
-optional arguments:
-  -h, --help     show this help message and exit
-  -l, --list     List the available contexts
-  -v, --verbose  Verbose output
-  -c, --create   Create a new context
-  -a, --add      Add to the current context
+    workon.py [-h] [-l] [-c] [-a] [-v] [context name]
+    
+    Establish/switch project context.
+    
+    positional arguments:
+      context        Name of the context to load/create. This argument is required unless -l/--list or -h/--help are specified.
+    
+    optional arguments:
+      -h, --help     show this help message and exit
+      -l, --list     List the available contexts
+      -v, --verbose  Verbose output
+      -c, --create   Create a new context
+      -a, --add      Add to the current context
 
 # Installation
 
