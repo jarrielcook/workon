@@ -1,0 +1,2 @@
+alias workon='~/bin/workon.py'
+
