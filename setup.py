@@ -24,11 +24,19 @@ s = setup(
 
 )
 
-installation_path = s.command_obj['install'].install_lib
-installation_egg = os.path.basename(glob.glob('dist/workon*egg')[0])
-script_path = os.path.join(installation_path, installation_egg, 'workon', 'workon.py')
+def create_link(src, dst):
+    installation_path = s.command_obj['install'].install_lib
+    installation_egg = os.path.basename(glob.glob('dist/workon*egg')[0])
+    script_path = os.path.join(installation_path, installation_egg, 'workon', src)
+    
+    try:
+        os.unlink(dst)
+    except:
+        pass
 
-os.unlink('/usr/bin/workon')
-os.symlink(script_path, '/usr/bin/workon')
-os.chmod('/usr/bin/workon', stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH)
+    os.symlink(script_path, dst)
+    os.chmod(dst, stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH)
+
+create_link('workon.py', '/usr/bin/workon')
+create_link('parse_workon_export.py', '/usr/bin/parse_workon_export')
 
