@@ -20,7 +20,7 @@ s = setup(
     packages=['workon'], #have to import modules directly in code after installing this wheel, like import mod2 (respective file name in this case is mod2.py) - no direct use of distribution name while importing
   
     include_package_data=True,
-    package_data={'workon': ['bash_alias.txt', 'bash_complete.txt', 'kanban_dir.zip', 'template_dir/*']},
+    package_data={'workon': ['Kanban-Template.json', 'bash_complete.txt', 'kanban_dir.zip', 'template_dir/*']},
 
 )
 

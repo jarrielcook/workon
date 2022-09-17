@@ -1,0 +1,29 @@
+{
+  "name": "Template",
+  "numberOfColumns": 3,
+  "columns": [
+    {
+      "name": "Backlog",
+      "cards": [],
+      "settings": {
+        "color": "#fec87b"
+      }
+    },
+    {
+      "name": "In Progress",
+      "cards": [],
+      "settings": {
+        "color": "#7cb5fe"
+      }
+    },
+    {
+      "name": "Complete",
+      "cards": [],
+      "settings": {
+        "color": "#7cfe8d"
+      }
+    }
+  ],
+  "archived": [],
+  "settings": {}
+}

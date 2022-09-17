@@ -75,6 +75,9 @@ try:
     # Create context directory
     ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR)
     os.mkdir(ctxdir)
+    # Copy Kanban template
+    kbtempl_path = os.path.join(get_script_path(), 'Kanban-Template.json')
+    shutil.copyfile(kbtempl_path, ctxdir)
     # Create "none" context
     template_path = os.path.join(get_script_path(), 'template_dir', 'none.json.tmpl')
     t = Template(file=template_path)
