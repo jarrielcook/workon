@@ -2,6 +2,13 @@ from setuptools import setup, find_packages
 import glob
 import os
 import stat
+import pathlib
+
+def glob_fix(package_name, glob):
+    # this assumes setup.py lives in the folder that contains the package
+    package_path = pathlib.Path(f'./{package_name}').resolve()
+    return [str(path.relative_to(package_path))
+            for path in package_path.glob(glob)]
 
 s = setup(
     #this will be the package name you will see, e.g. the output of 'conda list' in anaconda prompt
@@ -20,7 +27,7 @@ s = setup(
     packages=['workon'], #have to import modules directly in code after installing this wheel, like import mod2 (respective file name in this case is mod2.py) - no direct use of distribution name while importing
   
     include_package_data=True,
-    package_data={'workon': ['Kanban-Template.json', 'bash_complete.txt', 'kanban_dir.zip', 'template_dir/*']},
+    package_data={'workon': ['bash_complete.txt', 'template_dir/*', 'function_dir/*', 'kanban/*', *glob_fix('workon','TreeSheets-relocatable/**/*')]},
 
 )
 
@@ -39,4 +46,8 @@ def create_link(src, dst):
 
 create_link('workon.py', '/usr/bin/workon')
 create_link('parse_workon_export.py', '/usr/bin/parse_workon_export')
+create_link('TreeSheets-relocatable/treesheets', '/usr/bin/treesheets')
+
+os.system('pip install -i kanban python_kanban')
+
 

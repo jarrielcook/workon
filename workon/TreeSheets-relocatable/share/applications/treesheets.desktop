@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=TreeSheets
+GenericName=Hierarchical Spreadsheet
+GenericName[it]=Fogli di Calcolo
+Comment=A hierarchical spreadsheet / outliner productivity tool.
+TryExec=treesheets
+Exec=treesheets %f
+Terminal=false
+Icon=treesheets
+MimeType=application/x-treesheets;
+Categories=Office;Utility;Spreadsheet;TextEditor;
+Keywords=mindmaps;knowledge;organizer;organiser;information;brainstorming;pim;database;todo;

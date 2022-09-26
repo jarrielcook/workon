@@ -1,0 +1,6 @@
+{
+    "Treesheets_<name>": {
+        "command": "treesheets",
+        "args": "/home/cookjd1/.context/<name>.files/<name>.cts"
+    }
+}
