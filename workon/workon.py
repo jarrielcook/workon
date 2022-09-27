@@ -150,7 +150,7 @@ parser.add_argument('-s', '--show', dest='show', action='store_true', default=Fa
                     help='Show the current context')
 parser.add_argument('-e', '--edit', dest='edit', action='store_true', default=False,
                     help='Edit a context')
-parser.add_argument('-f', '--add-function', dest='add_function', action='store_true', default=False,
+parser.add_argument('-f', '--function', dest='function', 
                     help='Add/list pre-defined functions')
 parser.add_argument('--archive', dest='archive', action='store_true', default=False,
                     help='Archive a context. Can be restored later.')
@@ -161,7 +161,6 @@ parser.add_argument('--list-archive', dest='list_archive', action='store_true', 
 parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,
                     help='Verbose output')
 parser.add_argument('context', nargs='?', default='', help='Name of the context to create/open/close')
-parser.add_argument('function', nargs='?', default='', help='Name of the function to add')
 args = parser.parse_args()
 
 #
@@ -175,27 +174,28 @@ except:
     pass
 
 if args.list == True:
-    if args.add_function == True:
+    #
+    # List available contexts
+    #
+    context_list = get_contexts()
+    history = read_history()
+    extended_hist = extend_history(history, context_list)
+
+    # Display list of contexts in reverse order by last access time
+    indices = np.argsort(extended_hist)
+    for index in reversed(indices):
+        if args.verbose and context_list[index] in history:
+            datecode = datetime.fromtimestamp(float(extended_hist[index]))
+            datestr = datecode.strftime("%d/%m/%Y %H:%M:%S")
+            print('{:.<16} (Last access: {})'.format(context_list[index], datestr))
+        else:
+            print('{}'.format(context_list[index]))
+
+    if args.verbose:
+        print('=== Available Functions ===')
         function_list = get_functions()
         for func in function_list:
             print('{}'.format(func))
-    else:
-        #
-        # List available contexts
-        #
-        context_list = get_contexts()
-        history = read_history()
-        extended_hist = extend_history(history, context_list)
-
-        # Display list of contexts in reverse order by last access time
-        indices = np.argsort(extended_hist)
-        for index in reversed(indices):
-            if args.verbose and context_list[index] in history:
-                datecode = datetime.fromtimestamp(float(extended_hist[index]))
-                datestr = datecode.strftime("%d/%m/%Y %H:%M:%S")
-                print('{:.<16} (Last access: {})'.format(context_list[index], datestr))
-            else:
-                print('{}'.format(context_list[index]))
 
 elif args.list_archive == True:
     #
@@ -256,11 +256,11 @@ elif args.create == True:
         ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context + '.json')
         write_context(ctxfile, current_context)
 
-elif args.add_function == True:
+elif args.function != None:
     #
     # Create new context
     #
-    if len(args.context) == 0 or len(args.function) == 0:
+    if len(args.context) == 0:
         parser.print_help()
     else:
 
@@ -298,7 +298,10 @@ elif args.add_function == True:
             treesheet_src = os.path.join(get_script_path(), 'template_dir', 'template.cts')
             support_dir = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context+'.files')
             treesheet_dst = os.path.join(support_dir, args.context+'.cts')
-            os.mkdir(support_dir)
+            try:
+                os.mkdir(support_dir)
+            except:
+                pass
             shutil.copyfile(treesheet_src, treesheet_dst)
 
         ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context + '.json')
