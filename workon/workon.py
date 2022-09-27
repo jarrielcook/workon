@@ -137,30 +137,40 @@ def read_function(func):
 #
 # Parse command line arguments
 #
-parser = argparse.ArgumentParser(description='Establish/switch project environments.')
-parser.add_argument('-l', '--list', dest='list', action='store_true', default=False,
+parser = argparse.ArgumentParser(description='Establish/switch project contexts.')
+
+listing_group = parser.add_argument_group('List available contexts/pre-defined functions')
+listing_group.add_argument('-l', '--list', dest='list', action='store_true', default=False,
                     help='List the available contexts')
-parser.add_argument('-c', '--close', dest='close', action='store_true', default=False,
-                    help='Close a context')
-parser.add_argument('-n', '--new', dest='create', action='store_true', default=False,
+listing_group.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,
+                    help='Verbose output for listing')
+
+modify_group = parser.add_argument_group('Change/show running context')
+modify_group.add_argument('-c', '--close', dest='close', action='store_true', default=False,
+                    help='Close a running context')
+modify_group.add_argument('-a', '--add', dest='addtocontext', action='store_true', default=False,
+                    help='Add to the current running context')
+modify_group.add_argument('-s', '--show', dest='show', action='store_true', default=False,
+                    help='Show the current running context')
+
+edit_group = parser.add_argument_group('Edit context definition')
+edit_group.add_argument('-n', '--new', dest='create', action='store_true', default=False,
                     help='Create a new context')
-parser.add_argument('-a', '--add', dest='addtocontext', action='store_true', default=False,
-                    help='Add to the current context')
-parser.add_argument('-s', '--show', dest='show', action='store_true', default=False,
-                    help='Show the current context')
-parser.add_argument('-e', '--edit', dest='edit', action='store_true', default=False,
-                    help='Edit a context')
-parser.add_argument('-f', '--function', dest='function', 
-                    help='Add/list pre-defined functions')
-parser.add_argument('--archive', dest='archive', action='store_true', default=False,
+edit_group.add_argument('-e', '--edit', dest='edit', action='store_true', default=False,
+                    help='Edit a context definition')
+edit_group.add_argument('-f', '--function', dest='function', 
+                    help='Add/list pre-defined function to a context definition')
+
+archive_group = parser.add_argument_group('Archive')
+archive_group.add_argument('--archive', dest='archive', action='store_true', default=False,
                     help='Archive a context. Can be restored later.')
-parser.add_argument('--restore', dest='restore', action='store_true', default=False,
+archive_group.add_argument('--restore', dest='restore', action='store_true', default=False,
                     help='Restore a context from the archive.')
-parser.add_argument('--list-archive', dest='list_archive', action='store_true', default=False,
+archive_group.add_argument('--list-archive', dest='list_archive', action='store_true', default=False,
                     help='List the contexts in the archive.')
-parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,
-                    help='Verbose output')
+
 parser.add_argument('context', nargs='?', default='', help='Name of the context to create/open/close')
+
 args = parser.parse_args()
 
 #
