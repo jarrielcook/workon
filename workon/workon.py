@@ -11,6 +11,7 @@ from Cheetah.Template import Template
 import numpy as np
 from datetime import datetime
 import zipfile
+import importlib
 
 CONTEXT_DIR='.context'
 ARCHIVE_DIR='archive'
@@ -82,7 +83,7 @@ def find_command(command):
 
     return cmdpath
 
-def close_context(context):
+def close_context(context=''):
     current_context = {}
     try:
         ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, CURRENT_CONTEXT_FILE)
@@ -90,7 +91,7 @@ def close_context(context):
             current_context = json.load(fp)
         
         for ctx,apps in current_context.items():
-            if len(args.context) == 0 or ctx == args.context:
+            if len(context) == 0 or ctx == context:
                 for app,info in apps.items():
                     pid = info[0]
                     print("Stopping {} ({})".format(app, pid))
@@ -99,10 +100,10 @@ def close_context(context):
                     except:
                         pass
 
-                if len(args.context) > 0:
+                if len(context) > 0:
                     del current_context[ctx]
 
-        if len(args.context) == 0:
+        if len(context) == 0:
             current_context = {}
     
     except Exception as e:
@@ -134,6 +135,13 @@ def read_function(func):
 
     return function
 
+
+#
+# Enhance module search path
+#
+funcdir = os.path.join(get_script_path(), 'function_dir')
+sys.path.append(funcdir)
+
 #
 # Parse command line arguments
 #
@@ -143,7 +151,7 @@ listing_group = parser.add_argument_group('List available contexts/pre-defined f
 listing_group.add_argument('-l', '--list', dest='list', action='store_true', default=False,
                     help='List the available contexts')
 listing_group.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,
-                    help='Verbose output for listing')
+                    help='Verbose output for listing (shows pre-defined functions)')
 
 modify_group = parser.add_argument_group('Change/show running context')
 modify_group.add_argument('-c', '--close', dest='close', action='store_true', default=False,
@@ -279,6 +287,7 @@ elif args.function != None:
 
         # Replace "<name>" with context name
         newfunc = {}
+        module_name = ''
         for toolname,params in function.items():
             for key,val in params.items():
                 try:
@@ -294,6 +303,8 @@ elif args.function != None:
                             except:
                                 pass
                         newfunc[key] = env
+                    elif key == "module":
+                        module_name = val
                 except:
                     pass
 
@@ -303,16 +314,11 @@ elif args.function != None:
                 pass
             context[toolname] = newfunc
 
-        if args.function == "treesheets":
-            # Context treesheet storage
-            treesheet_src = os.path.join(get_script_path(), 'template_dir', 'template.cts')
-            support_dir = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context+'.files')
-            treesheet_dst = os.path.join(support_dir, args.context+'.cts')
-            try:
-                os.mkdir(support_dir)
-            except:
-                pass
-            shutil.copyfile(treesheet_src, treesheet_dst)
+        # Initialize the function is an initialization module provided
+        if len(module_name) > 0:
+            toolmod = importlib.import_module(module_name)
+            ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR)
+            toolmod.init_function(get_script_path(), ctxdir, args.context)
 
         ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context + '.json')
         write_context(ctxfile, context)
@@ -329,7 +335,7 @@ else:
         #
         current_context = {}
         if args.addtocontext == False:
-            current_context = close_context('')
+            current_context = close_context()
 
         #
         # Start new context
