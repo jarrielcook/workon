@@ -9,15 +9,36 @@ import argparse
 import shutil
 from Cheetah.Template import Template
 import numpy as np
-from datetime import datetime
+from datetime import datetime,date
 import zipfile
 import importlib
+import sqlite3
 
 CONTEXT_DIR='.context'
 ARCHIVE_DIR='archive'
 CURRENT_CONTEXT_FILE='.current_context.json'
 HISTORY_FILE='.history.json'
+TIME_TRACK_DB='.time_track.db'
+TIMERS_FILE='.timers.json'
 
+#
+# Path Helpers
+#
+def get_script_path():
+    return os.path.realpath(os.path.dirname(os.readlink(__file__)))
+
+def find_command(command):
+    cmdpath = ''
+    for path in os.environ['PATH'].split(':'):
+        if os.path.exists(os.path.join(path, command)):
+            cmdpath = os.path.join(path,command)
+            break
+
+    return cmdpath
+
+#
+# History Storage
+#
 def read_history():
     histfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, HISTORY_FILE)
     try:
@@ -32,35 +53,6 @@ def write_history(history):
     with open(histfile, 'w') as fp:
         json.dump(history, fp)
 
-def get_contexts():
-    context_list = []
-
-    ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR)
-    for f in os.listdir(ctxdir):
-        if f != CURRENT_CONTEXT_FILE and f != HISTORY_FILE and os.path.splitext(f)[1] == '.json':
-            context_list.append(os.path.splitext(f)[0])
-
-    return context_list
-
-def get_functions():
-    function_list = []
-
-    funcdir = os.path.join(get_script_path(), 'function_dir')
-    for f in os.listdir(funcdir):
-        function_list.append(os.path.splitext(f)[0])
-
-    return function_list
-
-def get_archive():
-    context_list = []
-
-    ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR, ARCHIVE_DIR)
-    for f in os.listdir(ctxdir):
-        if f != CURRENT_CONTEXT_FILE and f != HISTORY_FILE and os.path.splitext(f)[1] == '.json':
-            context_list.append(os.path.splitext(f)[0])
-
-    return context_list
-
 def extend_history(history, context):
     extended_hist = []
     for ctx in context:
@@ -71,30 +63,170 @@ def extend_history(history, context):
 
     return extended_hist
 
-def get_script_path():
-    return os.path.realpath(os.path.dirname(os.readlink(__file__)))
+#
+# Time Spent Database
+#
+def create_time_spent_db():
+    timer_db = os.path.join(os.environ['HOME'], CONTEXT_DIR, TIME_TRACK_DB)
+    if os.path.exists(timer_db) == False:
+        connection = sqlite3.connect(timer_db)
+        cursor = connection.cursor()
+        cursor.execute('CREATE TABLE time_spent(context NOT NULL, date NOT NULL, spent, PRIMARY KEY(context,date))')
+        connection.commit()
+        connection.close()
 
-def find_command(command):
-    cmdpath = ''
-    for path in os.environ['PATH'].split(':'):
-        if os.path.exists(os.path.join(path, command)):
-            cmdpath = os.path.join(path,command)
-            break
+def today_is_in_db(context):
+    timer_db = os.path.join(os.environ['HOME'], CONTEXT_DIR, TIME_TRACK_DB)
 
-    return cmdpath
+    try:
+        connection = sqlite3.connect(timer_db)
+        cursor = connection.cursor()
+        res = cursor.execute('SELECT count(*) FROM time_spent where context="{}" and date={}'.format(
+            context, date.today().strftime('%Y%m%d')))
+        occurrences = int(res.fetchone()[0])
+        connection.close()
+    except Exception as e:
+        print(e)
+
+    in_db = False
+    if occurrences > 0:
+        in_db = True
+
+    return in_db
+
+def get_time_spent(context, begin=None, end=None):
+    today = date.today().strftime('%Y%m%d')
+    if begin == None:
+        begin = today
+    if end == None:
+        end = today
+
+    if begin > end:
+        begin = end
+    if end < begin:
+        end = begin
+
+    timer_db = os.path.join(os.environ['HOME'], CONTEXT_DIR, TIME_TRACK_DB)
+    connection = sqlite3.connect(timer_db)
+    cursor = connection.cursor()
+    command = 'SELECT SUM(spent) FROM time_spent where context="{}" and date>={} and date<={}'.format(
+        context, begin, end)
+    res = cursor.execute(command)
+    time_spent = res.fetchone()[0]
+    connection.close()
+
+    return time_spent
+
+def pretty_time_spent(seconds):
+    seconds = int(seconds)
+    days, seconds = divmod(seconds, 86400)
+    hours, seconds = divmod(seconds, 3600)
+    minutes, seconds = divmod(seconds, 60)
+
+    if days > 0:
+        return '%dd %dh %dm %ds' % (days, hours, minutes, seconds)
+    elif hours > 0:
+        return '%dh %dm %ds' % (hours, minutes, seconds)
+    elif minutes > 0:
+        return '%dm %ds' % (minutes, seconds)
+    else:
+        return '%ds' % (seconds,)
+
+#
+# Timer Storage
+#
+def read_timers():
+    timers_file = os.path.join(os.environ['HOME'], CONTEXT_DIR, TIMERS_FILE)
+    with open(timers_file) as fp:
+        timers = json.load(fp)
+    return timers
+
+def write_timers(timers):
+    timers_file = os.path.join(os.environ['HOME'], CONTEXT_DIR, TIMERS_FILE)
+    with open(timers_file, 'w') as fp:
+        json.dump(timers, fp, indent=2)
+
+def start_timer(context):
+    timers = read_timers()
+    timers[context] = time.time()
+    write_timers(timers)
+
+def stop_timer(context):
+    timers = read_timers()
+    current_time = time.time()
+
+    if context in timers.keys():
+        elapsed = current_time - timers[context]
+        del timers[context]
+    else:
+        elapsed = 0
+
+    write_timers(timers)
+
+    if today_is_in_db(context):
+        command = 'UPDATE time_spent SET spent=spent+{} where context="{}" and date={}'.format(
+            elapsed, context, date.today().strftime('%Y%m%d'))
+    else:
+        command = 'INSERT INTO time_spent VALUES("{}", {}, "{}")'.format(
+            context, date.today().strftime('%Y%m%d'), elapsed)
+        
+    timer_db = os.path.join(os.environ['HOME'], CONTEXT_DIR, TIME_TRACK_DB)
+
+    try:
+        connection = sqlite3.connect(timer_db)
+        cursor = connection.cursor()
+        cursor.execute(command)
+        connection.commit()
+        connection.close()
+    except Exception as e:
+        print(e)
+
+#
+# Context storage
+#
+def get_contexts():
+    context_list = []
+
+    ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR)
+    for f in os.listdir(ctxdir):
+        if f[0] != '.' and os.path.splitext(f)[1] == '.json':
+            context_list.append(os.path.splitext(f)[0])
+
+    return context_list
+
+def read_context(context_name):
+    ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, context_name + '.json')
+    with open(ctxfile) as fp:
+        context = json.load(fp)
+
+    return context
+
+def write_context(filename, context):
+    with open(filename, 'w') as fp:
+        json.dump(context, fp, indent=2)
+        
+def read_current_context():
+    ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, CURRENT_CONTEXT_FILE)
+    with open(ctxfile) as fp:
+        current_context = json.load(fp)
+
+    return current_context
+        
+def write_current_context(current_context):
+    ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, CURRENT_CONTEXT_FILE)
+    write_context(ctxfile, current_context)
 
 def close_context(context=''):
     current_context = {}
     try:
-        ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, CURRENT_CONTEXT_FILE)
-        with open(ctxfile) as fp:
-            current_context = json.load(fp)
-        
+        current_context = read_current_context()
+
         for ctx,apps in current_context.items():
             if len(context) == 0 or ctx == context:
+                stop_timer(ctx)
+
                 for app,info in apps.items():
                     pid = info[0]
-                    print("Stopping {} ({})".format(app, pid))
                     try:
                         os.kill(pid, signal.SIGTERM)
                     except:
@@ -112,28 +244,43 @@ def close_context(context=''):
     #
     # Save current context info
     # 
-    with open(ctxfile, 'w') as fp:
-        json.dump(current_context, fp)
+    write_current_context(current_context)
     
     return current_context
 
-def read_context(context_name):
-    ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, context_name + '.json')
-    with open(ctxfile) as fp:
-        context = json.load(fp)
+#
+# Function storage
+#
+def get_functions():
+    function_list = []
 
-    return context
+    funcdir = os.path.join(get_script_path(), 'function_dir')
+    for f in os.listdir(funcdir):
+        extension = os.path.splitext(f)[1]
+        if extension == ".func":
+            function_list.append(os.path.splitext(f)[0])
 
-def write_context(filename, context):
-    with open(filename, 'w') as fp:
-        json.dump(context, fp, indent=2)
-        
+    return function_list
+
 def read_function(func):
     funcfile = os.path.join(get_script_path(), 'function_dir', '{}.func'.format(func))
     with open(funcfile) as fp:
         function = json.load(fp)
 
     return function
+
+#
+# Archive storage
+#
+def get_archive():
+    context_list = []
+
+    ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR, ARCHIVE_DIR)
+    for f in os.listdir(ctxdir):
+        if f[0] != '.' and os.path.splitext(f)[1] == '.json':
+            context_list.append(os.path.splitext(f)[0])
+
+    return context_list
 
 
 #
@@ -177,6 +324,16 @@ archive_group.add_argument('--restore', dest='restore', action='store_true', def
 archive_group.add_argument('--list-archive', dest='list_archive', action='store_true', default=False,
                     help='List the contexts in the archive.')
 
+time_group = parser.add_argument_group('Time Tracking')
+time_group.add_argument('--time-spent', dest='time_spent', action='store_true', default=False,
+                    help='Display the amount of time spent in a context.')
+time_group.add_argument('--date-begin', dest='date_begin', 
+                    type=str, default=date.today().strftime('%Y%m%d'),
+                    help='Beginning date for time spent. Format: YYYYMMDD')
+time_group.add_argument('--date-end', dest='date_end', 
+                    type=str, default=date.today().strftime('%Y%m%d'),
+                    help='End date for time spent. Format: YYYYMMDD')
+
 parser.add_argument('context', nargs='?', default='', help='Name of the context to create/open/close')
 
 args = parser.parse_args()
@@ -191,6 +348,16 @@ try:
 except:
     pass
 
+try:
+    # Create time tracking database
+    create_time_spent_db()
+except:
+    pass
+
+
+#
+# Execute User Instruction
+#
 if args.list == True:
     #
     # List available contexts
@@ -235,23 +402,28 @@ elif args.archive == True:
         pass
 
     cfgfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context + '.json')
+    support_dir = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context+'.files')
     try:
         shutil.move(cfgfile, arcdir)
+        shutil.move(support_dir, arcdir)
     except:
         print("Error archiving context: {}".format(args.context))
 
 elif args.restore == True:
     # Create archive directory, if it doesn't exist
     arcfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, ARCHIVE_DIR, args.context + '.json')
+    support_dir = os.path.join(os.environ['HOME'], CONTEXT_DIR, ARCHIVE_DIR, args.context+'.files')
     ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR)
-    shutil.move(arcfile, ctxdir)
+
+    try:
+        shutil.move(arcfile, ctxdir)
+        shutil.move(support_dir, ctxdir)
+    except:
+        print("Error restoring context: {}".format(args.context))
     
 
 elif args.show == True:
-    ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, CURRENT_CONTEXT_FILE)
-    with open(ctxfile) as fp:
-        current_context = json.load(fp)
-
+    current_context = read_current_context()
     print(json.dumps(current_context, indent=2))
 
 elif args.edit == True:
@@ -272,7 +444,7 @@ elif args.create == True:
     else:
         # Context context file
         ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context + '.json')
-        write_context(ctxfile, current_context)
+        write_context(ctxfile, dict())
 
 elif args.function != None:
     #
@@ -322,6 +494,13 @@ elif args.function != None:
 
         ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context + '.json')
         write_context(ctxfile, context)
+
+elif args.time_spent == True:
+    context_list = get_contexts()
+    for ctx in context_list:
+        spent = get_time_spent(ctx, args.date_begin, args.date_end)
+        if spent != None:
+            print('{:.<16} (Time spent: {})'.format(ctx, pretty_time_spent(spent)))
 
 elif args.close == True:
     close_context(args.context)
@@ -375,12 +554,12 @@ else:
             app[key] = (pid,time.time())
 
         current_context[args.context] = app
+        start_timer(args.context)
         
         #
         # Save current context info
         # 
-        ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, CURRENT_CONTEXT_FILE)
-        write_context(ctxfile, current_context)
+        write_current_context(current_context)
         
         history = read_history()
         history[args.context] = str(time.time())
