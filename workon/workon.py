@@ -237,7 +237,7 @@ def close_context(context=''):
 
         if len(context) == 0:
             current_context = {}
-    
+
     except Exception as e:
         pass
     
@@ -445,6 +445,9 @@ elif args.create == True:
         # Context context file
         ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context + '.json')
         write_context(ctxfile, dict())
+        # Create directory for context
+        ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context + '.files')
+        os.mkdir(ctxdir)
 
 elif args.function != None:
     #
@@ -512,9 +515,10 @@ else:
         #
         # End previous context (unless 'addtocontext' requested)
         #
-        current_context = {}
         if args.addtocontext == False:
             current_context = close_context()
+        else:
+            current_context = read_current_context()
 
         #
         # Start new context
