@@ -33,7 +33,7 @@ s = setup(
 
 def create_link(src, dst):
     installation_path = s.command_obj['install'].install_lib
-    installation_egg = os.path.basename(glob.glob('dist/workon*egg')[0])
+    installation_egg = os.path.basename(glob.glob(installation_path+'/workon*egg')[0])
     script_path = os.path.join(installation_path, installation_egg, 'workon', src)
     
     try:
@@ -44,10 +44,10 @@ def create_link(src, dst):
     os.symlink(script_path, dst)
     os.chmod(dst, stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH)
 
-create_link('workon.py', '/usr/bin/workon')
+create_link('workon_main.py', '/usr/bin/workon')
 create_link('parse_workon_export.py', '/usr/bin/parse_workon_export')
 create_link('TreeSheets-relocatable/treesheets', '/usr/bin/treesheets')
 
-os.system('pip install -i kanban python_kanban')
+os.system('pip install python_kanban')
 
 

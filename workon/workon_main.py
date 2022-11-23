@@ -13,8 +13,8 @@ from datetime import datetime,date
 import zipfile
 import importlib
 import sqlite3
+from workon import config
 
-CONTEXT_DIR='.context'
 ARCHIVE_DIR='archive'
 CURRENT_CONTEXT_FILE='.current_context.json'
 HISTORY_FILE='.history.json'
@@ -40,7 +40,8 @@ def find_command(command):
 # History Storage
 #
 def read_history():
-    histfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, HISTORY_FILE)
+    cfg = config.read_config()
+    histfile = os.path.join(cfg['context_dir'], HISTORY_FILE)
     try:
         with open(histfile, 'r') as fp:
             history = json.load(fp)
@@ -49,7 +50,8 @@ def read_history():
     return history
 
 def write_history(history):
-    histfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, HISTORY_FILE)
+    cfg = config.read_config()
+    histfile = os.path.join(cfg['context_dir'], HISTORY_FILE)
     with open(histfile, 'w') as fp:
         json.dump(history, fp)
 
@@ -67,7 +69,8 @@ def extend_history(history, context):
 # Time Spent Database
 #
 def create_time_spent_db():
-    timer_db = os.path.join(os.environ['HOME'], CONTEXT_DIR, TIME_TRACK_DB)
+    cfg = config.read_config()
+    timer_db = os.path.join(cfg['context_dir'], TIME_TRACK_DB)
     if os.path.exists(timer_db) == False:
         connection = sqlite3.connect(timer_db)
         cursor = connection.cursor()
@@ -76,7 +79,8 @@ def create_time_spent_db():
         connection.close()
 
 def today_is_in_db(context):
-    timer_db = os.path.join(os.environ['HOME'], CONTEXT_DIR, TIME_TRACK_DB)
+    cfg = config.read_config()
+    timer_db = os.path.join(cfg['context_dir'], TIME_TRACK_DB)
 
     try:
         connection = sqlite3.connect(timer_db)
@@ -106,7 +110,8 @@ def get_time_spent(context, begin=None, end=None):
     if end < begin:
         end = begin
 
-    timer_db = os.path.join(os.environ['HOME'], CONTEXT_DIR, TIME_TRACK_DB)
+    cfg = config.read_config()
+    timer_db = os.path.join(cfg['context_dir'], TIME_TRACK_DB)
     connection = sqlite3.connect(timer_db)
     cursor = connection.cursor()
     command = 'SELECT SUM(spent) FROM time_spent where context="{}" and date>={} and date<={}'.format(
@@ -119,10 +124,12 @@ def get_time_spent(context, begin=None, end=None):
 
 def pretty_time_spent(seconds):
     seconds = int(seconds)
-    days, seconds = divmod(seconds, 86400)
+    #days, seconds = divmod(seconds, 86400)
     hours, seconds = divmod(seconds, 3600)
     minutes, seconds = divmod(seconds, 60)
 
+    return '{:3}h {:2}m {:2}s'.format(hours, minutes, seconds)
+    '''
     if days > 0:
         return '%dd %dh %dm %ds' % (days, hours, minutes, seconds)
     elif hours > 0:
@@ -131,18 +138,21 @@ def pretty_time_spent(seconds):
         return '%dm %ds' % (minutes, seconds)
     else:
         return '%ds' % (seconds,)
+    '''
 
 #
 # Timer Storage
 #
 def read_timers():
-    timers_file = os.path.join(os.environ['HOME'], CONTEXT_DIR, TIMERS_FILE)
+    cfg = config.read_config()
+    timers_file = os.path.join(cfg['context_dir'], TIMERS_FILE)
     with open(timers_file) as fp:
         timers = json.load(fp)
     return timers
 
 def write_timers(timers):
-    timers_file = os.path.join(os.environ['HOME'], CONTEXT_DIR, TIMERS_FILE)
+    cfg = config.read_config()
+    timers_file = os.path.join(cfg['context_dir'], TIMERS_FILE)
     with open(timers_file, 'w') as fp:
         json.dump(timers, fp, indent=2)
 
@@ -170,7 +180,28 @@ def stop_timer(context):
         command = 'INSERT INTO time_spent VALUES("{}", {}, "{}")'.format(
             context, date.today().strftime('%Y%m%d'), elapsed)
         
-    timer_db = os.path.join(os.environ['HOME'], CONTEXT_DIR, TIME_TRACK_DB)
+    cfg = config.read_config()
+    timer_db = os.path.join(cfg['context_dir'], TIME_TRACK_DB)
+
+    try:
+        connection = sqlite3.connect(timer_db)
+        cursor = connection.cursor()
+        cursor.execute(command)
+        connection.commit()
+        connection.close()
+    except Exception as e:
+        print(e)
+
+def add_time_spent(context, elapsed):
+    if today_is_in_db(context):
+        command = 'UPDATE time_spent SET spent=spent+{} where context="{}" and date={}'.format(
+            elapsed, context, date.today().strftime('%Y%m%d'))
+    else:
+        command = 'INSERT INTO time_spent VALUES("{}", {}, "{}")'.format(
+            context, date.today().strftime('%Y%m%d'), elapsed)
+        
+    cfg = config.read_config()
+    timer_db = os.path.join(cfg['context_dir'], TIME_TRACK_DB)
 
     try:
         connection = sqlite3.connect(timer_db)
@@ -187,15 +218,16 @@ def stop_timer(context):
 def get_contexts():
     context_list = []
 
-    ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR)
-    for f in os.listdir(ctxdir):
+    cfg = config.read_config()
+    for f in os.listdir(cfg['context_dir']):
         if f[0] != '.' and os.path.splitext(f)[1] == '.json':
             context_list.append(os.path.splitext(f)[0])
 
     return context_list
 
 def read_context(context_name):
-    ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, context_name + '.json')
+    cfg = config.read_config()
+    ctxfile = os.path.join(cfg['context_dir'], context_name + '.json')
     with open(ctxfile) as fp:
         context = json.load(fp)
 
@@ -206,14 +238,16 @@ def write_context(filename, context):
         json.dump(context, fp, indent=2)
         
 def read_current_context():
-    ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, CURRENT_CONTEXT_FILE)
+    cfg = config.read_config()
+    ctxfile = os.path.join(cfg['context_dir'], CURRENT_CONTEXT_FILE)
     with open(ctxfile) as fp:
         current_context = json.load(fp)
 
     return current_context
         
 def write_current_context(current_context):
-    ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, CURRENT_CONTEXT_FILE)
+    cfg = config.read_config()
+    ctxfile = os.path.join(cfg['context_dir'], CURRENT_CONTEXT_FILE)
     write_context(ctxfile, current_context)
 
 def close_context(context=''):
@@ -275,8 +309,9 @@ def read_function(func):
 def get_archive():
     context_list = []
 
-    ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR, ARCHIVE_DIR)
-    for f in os.listdir(ctxdir):
+    cfg = config.read_config()
+    arcdir = os.path.join(cfg['context_dir'], ARCHIVE_DIR)
+    for f in os.listdir(arcdir):
         if f[0] != '.' and os.path.splitext(f)[1] == '.json':
             context_list.append(os.path.splitext(f)[0])
 
@@ -333,6 +368,9 @@ time_group.add_argument('--date-begin', dest='date_begin',
 time_group.add_argument('--date-end', dest='date_end', 
                     type=str, default=date.today().strftime('%Y%m%d'),
                     help='End date for time spent. Format: YYYYMMDD')
+time_group.add_argument('--add-time', dest='additional_time',
+                    type=str, default='',
+                    help='Elapsed time to add. Format: HH:MM:SS')
 
 parser.add_argument('context', nargs='?', default='', help='Name of the context to create/open/close')
 
@@ -343,8 +381,8 @@ args = parser.parse_args()
 #
 try:
     # Create context directory
-    ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR)
-    os.mkdir(ctxdir)
+    cfg = config.read_config()
+    os.mkdir(cfg['context_dir'])
 except:
     pass
 
@@ -395,14 +433,15 @@ elif args.list_archive == True:
 
 elif args.archive == True:
     # Create archive directory, if it doesn't exist
-    arcdir = os.path.join(os.environ['HOME'], CONTEXT_DIR, ARCHIVE_DIR)
+    cfg = config.read_config()
+    arcdir = os.path.join(cfg['context_dir'], ARCHIVE_DIR)
     try:
         os.mkdir(arcdir)
     except:
         pass
 
-    cfgfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context + '.json')
-    support_dir = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context+'.files')
+    cfgfile = os.path.join(cfg['context_dir'], args.context + '.json')
+    support_dir = os.path.join(cfg['context_dir'], args.context+'.files')
     try:
         shutil.move(cfgfile, arcdir)
         shutil.move(support_dir, arcdir)
@@ -411,13 +450,13 @@ elif args.archive == True:
 
 elif args.restore == True:
     # Create archive directory, if it doesn't exist
-    arcfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, ARCHIVE_DIR, args.context + '.json')
-    support_dir = os.path.join(os.environ['HOME'], CONTEXT_DIR, ARCHIVE_DIR, args.context+'.files')
-    ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR)
+    cfg = config.read_config()
+    arcfile = os.path.join(cfg['context_dir'], ARCHIVE_DIR, args.context + '.json')
+    support_dir = os.path.join(cfg['context_dir'], ARCHIVE_DIR, args.context+'.files')
 
     try:
-        shutil.move(arcfile, ctxdir)
-        shutil.move(support_dir, ctxdir)
+        shutil.move(arcfile, cfg['context_dir'])
+        shutil.move(support_dir, cfg['context_dir'])
     except:
         print("Error restoring context: {}".format(args.context))
     
@@ -427,7 +466,8 @@ elif args.show == True:
     print(json.dumps(current_context, indent=2))
 
 elif args.edit == True:
-    cfgfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context + '.json')
+    cfg = config.read_config()
+    cfgfile = os.path.join(cfg['context_dir'], args.context + '.json')
     editor = find_command(os.environ['EDITOR'])
     if len(editor) > 0:
         spawnargs = tuple([editor] + [cfgfile])
@@ -443,11 +483,12 @@ elif args.create == True:
         parser.print_help()
     else:
         # Context context file
-        ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context + '.json')
+        cfg = config.read_config()
+        ctxfile = os.path.join(cfg['context_dir'], args.context + '.json')
         write_context(ctxfile, dict())
         # Create directory for context
-        ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context + '.files')
-        os.mkdir(ctxdir)
+        ctxfiles = os.path.join(cfg['context_dir'], args.context + '.files')
+        os.mkdir(ctxfiles)
 
 elif args.function != None:
     #
@@ -490,20 +531,30 @@ elif args.function != None:
             context[toolname] = newfunc
 
         # Initialize the function is an initialization module provided
+        cfg = config.read_config()
         if len(module_name) > 0:
             toolmod = importlib.import_module(module_name)
-            ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR)
-            toolmod.init_function(get_script_path(), ctxdir, args.context)
+            toolmod.init_function(get_script_path(), cfg['context_dir'], args.context)
 
-        ctxfile = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context + '.json')
+        ctxfile = os.path.join(os.environ['HOME'], cfg['context_dir'], args.context + '.json')
         write_context(ctxfile, context)
 
 elif args.time_spent == True:
     context_list = get_contexts()
+    total = 0
     for ctx in context_list:
         spent = get_time_spent(ctx, args.date_begin, args.date_end)
         if spent != None:
             print('{:.<16} (Time spent: {})'.format(ctx, pretty_time_spent(spent)))
+            total = total + spent
+    print('{:.<16} (Time spent: {})'.format('TOTAL', pretty_time_spent(total)))
+
+elif len(args.additional_time) > 0:
+    t0 = datetime.strptime('0','%S')
+    t1 = datetime.strptime(args.additional_time, '%H:%M:%S')
+    elapsed = (t1-t0).total_seconds()
+    print('Adding {} seconds to {} context'.format(elapsed, args.context))
+    add_time_spent(args.context, elapsed)
 
 elif args.close == True:
     close_context(args.context)
@@ -523,39 +574,42 @@ else:
         #
         # Start new context
         #
-        config = read_context(args.context)
+        ctx = read_context(args.context)
         
         app = {}
 
+        cfg = config.read_config()
         try:
-            support_dir = os.path.join(os.environ['HOME'], CONTEXT_DIR, args.context+'.files')
+            support_dir = os.path.join(cfg['context_dir'], args.context+'.files')
             os.chdir(support_dir)
         except:
-            ctxdir = os.path.join(os.environ['HOME'], CONTEXT_DIR)
-            os.chdir(ctxdir)
+            os.chdir(cfg['context_dir'])
 
-        for key,actions in config.items():
+        for key,actions in ctx.items():
             command = actions['command']
             if command[0] != '/':
                 command = find_command(command)
 
-            try:
-                arguments = actions['args'].split()
-            except:
-                arguments = []
+            if len(command) > 0:
+                try:
+                    arguments = actions['args'].split()
+                except:
+                    arguments = []
 
-            try:
-                envars = actions['env']
-            except:
-                envars = {}
+                try:
+                    envars = actions['env']
+                except:
+                    envars = {}
 
-            spawnenv = os.environ
-            for var,val in envars.items():
-                spawnenv[key] = val
+                spawnenv = os.environ
+                for var,val in envars.items():
+                    spawnenv[key] = val
 
-            spawnargs = tuple([command] + arguments)
-            pid = os.spawnve(os.P_NOWAIT, command, spawnargs, spawnenv)
-            app[key] = (pid,time.time())
+                spawnargs = tuple([command] + arguments)
+                pid = os.spawnve(os.P_NOWAIT, command, spawnargs, spawnenv)
+                app[key] = (pid,time.time())
+            else:
+                print('Error finding command: {}'.format(actions['command']))
 
         current_context[args.context] = app
         start_timer(args.context)
