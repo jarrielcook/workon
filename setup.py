@@ -45,7 +45,6 @@ def create_link(src, dst):
     os.chmod(dst, stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH)
 
 create_link('workon_main.py', '/usr/bin/workon')
-create_link('parse_workon_export.py', '/usr/bin/parse_workon_export')
 create_link('TreeSheets-relocatable/treesheets', '/usr/bin/treesheets')
 
 os.system('pip install python_kanban')
