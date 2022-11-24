@@ -71,3 +71,19 @@ To install, run the following command from the root directory:
 
     sudo python setup.py install
 
+# Bash Complete
+
+To enable bash completion for context names, add the following to the user's .bashrc:
+
+
+    function _workon_complete_()
+    {
+        local cmd="${1##*/}"
+        local word=${COMP_WORDS[COMP_CWORD]}
+        local line=${COMP_LINE}
+        local workon_sessions=$(python3 ~/bin/workon.py -l)
+    
+        COMPREPLY=($(compgen -W "$workon_sessions" -- "$word"))
+    }
+    complete -F _workon_complete_ workon
+
