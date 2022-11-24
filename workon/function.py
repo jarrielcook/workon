@@ -47,16 +47,16 @@ def add_function_to_context(ctx_name, func):
             try:
                 if key == "command":
                     newfunc[key] = val.replace("<name>", ctx_name)
-                    newfunc[key] = newfunc[key].replace("<context>", cfg['context_dir'])
+                    newfunc[key] = newfunc[key].replace("<context_dir>", cfg['context_dir'])
                 elif key == "args":
                     newfunc[key] = val.replace("<name>", ctx_name)
-                    newfunc[key] = newfunc[key].replace("<context>", cfg['context_dir'])
+                    newfunc[key] = newfunc[key].replace("<context_dir>", cfg['context_dir'])
                 elif key == "env":
                     env = {}
                     for var,string in val.items():
                         try:
                             env[var] = string.replace("<name>", ctx_name)
-                            env[var] = env[var].replace("<context>", cfg['context_dir'])
+                            env[var] = env[var].replace("<context_dir>", cfg['context_dir'])
                         except:
                             pass
                     newfunc[key] = env
@@ -67,7 +67,7 @@ def add_function_to_context(ctx_name, func):
 
         try:
             toolname = toolname.replace("<name>", ctx_name)
-            toolname = toolname.replace("<context>", cfg['context_dir'])
+            toolname = toolname.replace("<context_dir>", cfg['context_dir'])
         except:
             pass
         ctx[toolname] = newfunc
