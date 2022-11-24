@@ -4,15 +4,11 @@ import json
 import os
 import sys
 import time
-import signal
 import argparse
 import shutil
-from Cheetah.Template import Template
 import numpy as np
 from datetime import datetime,date
-import zipfile
-import importlib
-from workon import config,context,history,tracking,archive
+from workon import config,context,history,tracking,archive,function
 
 #
 # Path Helpers
@@ -28,34 +24,6 @@ def find_command(command):
             break
 
     return cmdpath
-
-#
-# Function storage
-#
-def get_functions():
-    function_list = []
-
-    funcdir = os.path.join(get_script_path(), 'function_dir')
-    for f in os.listdir(funcdir):
-        extension = os.path.splitext(f)[1]
-        if extension == ".func":
-            function_list.append(os.path.splitext(f)[0])
-
-    return function_list
-
-def read_function(func):
-    funcfile = os.path.join(get_script_path(), 'function_dir', '{}.func'.format(func))
-    with open(funcfile) as fp:
-        function = json.load(fp)
-
-    return function
-
-
-#
-# Enhance module search path
-#
-funcdir = os.path.join(get_script_path(), 'function_dir')
-sys.path.append(funcdir)
 
 #
 # Parse command line arguments
@@ -110,12 +78,30 @@ parser.add_argument('context', nargs='?', default='', help='Name of the context 
 args = parser.parse_args()
 
 #
-# Create context directory if it does not exist
+# Create directories if they do not exist
 #
 try:
     # Create context directory
     cfg = config.read_config()
     os.mkdir(cfg['context_dir'])
+except:
+    pass
+
+try:
+    # Create function directory
+    cfg = config.read_config()
+    func_dir = os.path.join(cfg['context_dir'], 'function_dir')
+    src_dir = os.path.join(get_script_path(), 'function_dir')
+    shutil.copytree(src_dir, func_dir)
+except:
+    pass
+
+try:
+    # Create template directory
+    cfg = config.read_config()
+    tmpl_dir = os.path.join(cfg['context_dir'], 'template_dir')
+    src_dir = os.path.join(get_script_path(), 'template_dir')
+    shutil.copytree(src_dir, tmpl_dir)
 except:
     pass
 
@@ -149,7 +135,7 @@ if args.list == True:
 
     if args.verbose:
         print('=== Available Functions ===')
-        function_list = get_functions()
+        function_list = function.get_functions()
         for func in function_list:
             print('{}'.format(func))
 
@@ -159,7 +145,7 @@ elif args.list_archive == True:
     #
     archive_list = archive.get_archive()
 
-    # Display list of contexts in reverse order by last access time
+    # Display list
     for arc in archive_list:
         print('{}'.format(arc))
 
@@ -206,47 +192,7 @@ elif args.function != None:
     if len(args.context) == 0:
         parser.print_help()
     else:
-
-        ctx = context.read_context(args.context)
-        function = read_function(args.function)
-
-        # Replace "<name>" with context name
-        newfunc = {}
-        module_name = ''
-        for toolname,params in function.items():
-            for key,val in params.items():
-                try:
-                    if key == "command":
-                        newfunc[key] = val.replace("<name>", args.context)
-                    elif key == "args":
-                        newfunc[key] = val.replace("<name>", args.context)
-                    elif key == "env":
-                        env = {}
-                        for var,string in val.items():
-                            try:
-                                env[var] = string.replace("<name>", args.context)
-                            except:
-                                pass
-                        newfunc[key] = env
-                    elif key == "module":
-                        module_name = val
-                except:
-                    pass
-
-            try:
-                toolname = toolname.replace("<name>", args.context)
-            except:
-                pass
-            ctx[toolname] = newfunc
-
-        # Initialize the function is an initialization module provided
-        cfg = config.read_config()
-        if len(module_name) > 0:
-            toolmod = importlib.import_module(module_name)
-            toolmod.init_function(get_script_path(), cfg['context_dir'], args.context)
-
-        ctxfile = os.path.join(os.environ['HOME'], cfg['context_dir'], args.context + '.json')
-        context.write_context(ctxfile, ctx)
+        function.add_function_to_context(args.context, args.function)
 
 elif args.time_spent == True:
     context_list = context.get_contexts()
@@ -263,7 +209,7 @@ elif len(args.additional_time) > 0:
     t1 = datetime.strptime(args.additional_time, '%H:%M:%S')
     elapsed = (t1-t0).total_seconds()
     print('Adding {} seconds to {} context'.format(elapsed, args.context))
-    add_time_spent(args.context, elapsed)
+    tracking.add_time_spent(args.context, elapsed)
 
 elif args.close == True:
     context.close_context(args.context)

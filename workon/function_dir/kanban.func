@@ -3,7 +3,7 @@
         "command": "xterm",
         "args": "-e python_kanban",
         "env": {
-            "DYNACONF_DB_FILE": "/home/cookjd1/.context/<name>.files/<name>_kanban.db"
+            "DYNACONF_DB_FILE": "<context>/<name>.files/<name>_kanban.db"
         }
     }
 }

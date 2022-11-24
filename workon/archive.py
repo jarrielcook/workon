@@ -32,9 +32,10 @@ def move_to_archive(context):
     support_dir = os.path.join(cfg['context_dir'], context+'.files')
     try:
         shutil.move(cfgfile, arcdir)
-        shutil.move(support_dir, arcdir)
-    except:
-        print("Error archiving context: {}".format(context))
+        if os.path.exists(support_dir):
+            shutil.move(support_dir, arcdir)
+    except Exception as e:
+        print("Error archiving context: {} ({})".format(context, e))
 
 def restore_from_archive(context):
     # Create archive directory, if it doesn't exist
@@ -44,7 +45,9 @@ def restore_from_archive(context):
 
     try:
         shutil.move(arcfile, cfg['context_dir'])
-        shutil.move(support_dir, cfg['context_dir'])
-    except:
-        print("Error restoring context: {}".format(context))
+
+        if os.path.exists(support_dir):
+            shutil.move(support_dir, cfg['context_dir'])
+    except Exception as e:
+        print("Error restoring context: {} ({})".format(context, e))
     
