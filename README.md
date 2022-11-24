@@ -24,21 +24,50 @@ The user can add additional tools that need to be run for a context by manually 
 
 # Usage
 
-    workon.py [-h] [-l] [-c] [-a] [-v] [context name]
+    workon [-h] [-l] [-v] [-c] [-a] [-s] [-n] [-e] [-f FUNCTION] [--archive] [--restore]
+                  [--list-archive] [--time-spent] [--date-begin DATE_BEGIN] [--date-end DATE_END]
+                  [--add-time ADDITIONAL_TIME]
+                  [context]
     
-    Establish/switch project context.
+    Establish/switch project contexts.
     
     positional arguments:
-      context        Name of the context to load/create. This argument is required unless -l/--list or -h/--help are specified.
+      context               Name of the context to create/open/close
     
     optional arguments:
-      -h, --help     show this help message and exit
-      -l, --list     List the available contexts
-      -v, --verbose  Verbose output
-      -c, --create   Create a new context
-      -a, --add      Add to the current context
+      -h, --help            show this help message and exit
+    
+    List available contexts/pre-defined functions:
+      -l, --list            List the available contexts
+      -v, --verbose         Verbose output for listing (shows pre-defined functions)
+    
+    Change/show running context:
+      -c, --close           Close a running context
+      -a, --add             Add to the current running context
+      -s, --show            Show the current running context
+    
+    Edit context definition:
+      -n, --new             Create a new context
+      -e, --edit            Edit a context definition
+      -f FUNCTION, --function FUNCTION
+                            Add/list pre-defined function to a context definition
+    
+    Archive:
+      --archive             Archive a context. Can be restored later.
+      --restore             Restore a context from the archive.
+      --list-archive        List the contexts in the archive.
+    
+    Time Tracking:
+      --time-spent          Display the amount of time spent in a context.
+      --date-begin DATE_BEGIN
+                            Beginning date for time spent. Format: YYYYMMDD
+      --date-end DATE_END   End date for time spent. Format: YYYYMMDD
+      --add-time ADDITIONAL_TIME
+                            Elapsed time to add. Format: HH:MM:SS
 
 # Installation
 
+To install, run the following command from the root directory:
 
+    sudo python setup.py install
 
