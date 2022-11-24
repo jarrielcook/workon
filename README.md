@@ -11,6 +11,9 @@ The workon tool maintains definition of each context. The description is contain
         "Kanban": {
             "command": "/usr/bin/firefox",
             "args": "/home/user/.context/context.kanban/index.html"
+            "env": {
+                "KANBAN_VAR": "variable contents"
+            }
         },
         "Overleaf": {
             "command": "/opt/google/chrome/chrome",
@@ -21,6 +24,21 @@ The workon tool maintains definition of each context. The description is contain
 This example represents a context with 2 tools: a Kanban board for tracking issues through a linear workflow, and an overleaf instance accessed through a web browser. workon assumes that nearly every context will need to manage and track issues. Therefore, every new context created by workon is given its own Kanban instance.
 
 The user can add additional tools that need to be run for a context by manually editing the json file for that context. The json files for the contexts are stored in the ".context" subdirectory of the user's home directory.
+
+# Configuration file
+
+A configuration file named ".workon.cfg" is created in the user's home directory after the first time the tool runs. The configuration file holds user configurable variables.
+
+# Functions
+
+There are predefined tools called "functions" included with workon. The function names can be found at the bottom of the verbose listing output:
+
+    workon -lv
+
+The functions defintions are in the function_dir subdirectory in the context directory. Users can add their own custom functions by adding a function template to the function_dir. The templates use the same JSON format as the context files and can optionally include the following placeholder values:
+
+    <name>:         Will be replaced with the name of the context
+    <context_dir>:  Will be replaced with the context directory path
 
 # Usage
 
