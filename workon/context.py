@@ -1,6 +1,8 @@
 import os
 import json
-from workon import config,tracking
+import signal
+from workon import config
+from workon import tracking
 
 CURRENT_CONTEXT_FILE='.current_context.json'
 
@@ -55,8 +57,8 @@ def close_context(context=''):
                     pid = info[0]
                     try:
                         os.kill(pid, signal.SIGTERM)
-                    except:
-                        pass
+                    except Exception as e:
+                        print('Error killing {} ({})'.format(app, e))
 
                 if len(context) > 0:
                     del current_context[ctx]
@@ -65,7 +67,7 @@ def close_context(context=''):
             current_context = {}
 
     except Exception as e:
-        pass
+        print('Error closing contexts: {}'.format(e))
     
     #
     # Save current context info

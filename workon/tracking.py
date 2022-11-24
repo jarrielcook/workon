@@ -113,7 +113,7 @@ def stop_timer(context):
 
     write_timers(timers)
 
-    if tracking.today_is_in_db(context):
+    if today_is_in_db(context):
         command = 'UPDATE time_spent SET spent=spent+{} where context="{}" and date={}'.format(
             elapsed, context, date.today().strftime('%Y%m%d'))
     else:
@@ -133,7 +133,7 @@ def stop_timer(context):
         print(e)
 
 def add_time_spent(context, elapsed):
-    if tracking.today_is_in_db(context):
+    if today_is_in_db(context):
         command = 'UPDATE time_spent SET spent=spent+{} where context="{}" and date={}'.format(
             elapsed, context, date.today().strftime('%Y%m%d'))
     else:
