@@ -75,8 +75,6 @@ time_group.add_argument('--add-time', dest='additional_time',
 
 parser.add_argument('context', nargs='?', default='', help='Name of the context to create/open/close')
 
-args = parser.parse_args()
-
 #
 # Create directories if they do not exist
 #
@@ -84,6 +82,7 @@ try:
     # Create context directory
     cfg = config.read_config()
     os.mkdir(cfg['context_dir'])
+    context.write_current_context(dict())
 except:
     pass
 
@@ -111,6 +110,7 @@ try:
 except:
     pass
 
+args = parser.parse_args()
 
 #
 # Execute User Instruction

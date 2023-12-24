@@ -21,6 +21,11 @@ def create_time_spent_db():
         connection.commit()
         connection.close()
 
+    timers_file = os.path.join(cfg['context_dir'], TIMERS_FILE)
+    if os.path.exists(timers_file) == False:
+        with open(timers_file, 'w') as fp:
+            json.dump(dict(), fp, indent=2)
+
 def today_is_in_db(context):
     cfg = config.read_config()
     timer_db = os.path.join(cfg['context_dir'], TIME_TRACK_DB)
