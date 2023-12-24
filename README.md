@@ -89,6 +89,9 @@ To install, run the following command from the root directory:
 
     sudo python setup.py install
 
+Make sure to set the **EDITOR** environment variable to point to your favorite text editor. 
+It will be executed when editing contexts via *workon --edit*.
+
 # Bash Complete
 
 To enable bash completion for context names, add the following to the user's .bashrc:
@@ -99,7 +102,7 @@ To enable bash completion for context names, add the following to the user's .ba
         local cmd="${1##*/}"
         local word=${COMP_WORDS[COMP_CWORD]}
         local line=${COMP_LINE}
-        local workon_sessions=$(python3 ~/bin/workon.py -l)
+        local workon_sessions=$(workon -l)
     
         COMPREPLY=($(compgen -W "$workon_sessions" -- "$word"))
     }
