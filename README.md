@@ -89,7 +89,7 @@ To install, run the following command from the root directory:
 
     sudo python setup.py install
 
-Make sure to set the **EDITOR** environment variable to point to your favorite text editor. 
+Make sure to export the **EDITOR** environment variable to point to your favorite text editor. 
 It will be executed when editing contexts via *workon --edit*.
 
 # Bash Complete
