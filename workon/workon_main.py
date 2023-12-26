@@ -7,8 +7,9 @@ import time
 import argparse
 import shutil
 import numpy as np
-from datetime import datetime,date
+from datetime import datetime,date,timedelta
 from workon import config,context,history,tracking,archive,function
+import re
 
 #
 # Path Helpers
@@ -24,6 +25,21 @@ def find_command(command):
             break
 
     return cmdpath
+
+#
+# Time duration helper
+#
+duration_regex = re.compile(r'((?P<weeks>[\.\d]+?)w)?((?P<days>[\.\d]+?)d)?')
+def parse_duration(duration_str):
+    parts = duration_regex.match(duration_str)
+    if not parts:
+        return
+    parts = parts.groupdict()
+    time_params = {}
+    for name, param in parts.items():
+        if param:
+            time_params[name] = int(param)
+    return timedelta(**time_params)
 
 #
 # Parse command line arguments
@@ -69,6 +85,9 @@ time_group.add_argument('--date-begin', dest='date_begin',
 time_group.add_argument('--date-end', dest='date_end', 
                     type=str, default=date.today().strftime('%Y%m%d'),
                     help='End date for time spent. Format: YYYYMMDD')
+time_group.add_argument('--duration', dest='duration', 
+                    type=str, nargs='?',
+                    help='Duration time spent. Only one of --date-end or --duration are used. --duration takes precedence. Format: <number>[weeks|days]')
 time_group.add_argument('--add-time', dest='additional_time',
                     type=str, default='',
                     help='Elapsed time to add. Format: HH:MM:SS')
@@ -198,7 +217,14 @@ elif args.time_spent == True:
     context_list = context.get_contexts()
     total = 0
     for ctx in context_list:
-        spent = tracking.get_time_spent(ctx, args.date_begin, args.date_end)
+        if args.duration != None:
+            time_delta = parse_duration(args.duration)
+            date_begin_obj = datetime.strptime(args.date_begin,'%Y%m%d')
+            date_end_obj = date_begin_obj + time_delta
+            date_end = date_end_obj.strftime('%Y%m%d')
+        else:
+            date_end = args.date_end
+        spent = tracking.get_time_spent(ctx, args.date_begin, date_end)
         if spent != None:
             print('{:.<16} (Time spent: {})'.format(ctx, tracking.pretty_time_spent(spent)))
             total = total + spent
