@@ -27,26 +27,12 @@ s = setup(
     packages=['workon'], #have to import modules directly in code after installing this wheel, like import mod2 (respective file name in this case is mod2.py) - no direct use of distribution name while importing
   
     include_package_data=True,
-    package_data={'workon': ['bash_complete.txt', 'template_dir/*', 'function_dir/*', 'kanban/*', *glob_fix('workon','TreeSheets-relocatable/**/*')]},
+    package_data={'workon': ['template_dir/*', 'function_dir/*']},
 
+    entry_points = {
+        'console_scripts': [
+            'workon = workon.__main__:main',
+        ],
+    },
 )
-
-def create_link(src, dst):
-    installation_path = s.command_obj['install'].install_lib
-    installation_egg = os.path.basename(glob.glob(installation_path+'/workon*egg')[0])
-    script_path = os.path.join(installation_path, installation_egg, 'workon', src)
-    
-    try:
-        os.unlink(dst)
-    except:
-        pass
-
-    os.symlink(script_path, dst)
-    os.chmod(dst, stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH)
-
-create_link('workon_main.py', '/usr/bin/workon')
-create_link('TreeSheets-relocatable/treesheets', '/usr/bin/treesheets')
-
-os.system('pip install python_kanban')
-
 

@@ -85,9 +85,13 @@ The functions defintions are in the function_dir subdirectory in the context dir
 
 # Installation
 
+To build, run the following command from the root directory:
+
+    python setup.py build
+
 To install, run the following command from the root directory:
 
-    sudo python setup.py install
+    sudo pip install .
 
 Make sure to export the **EDITOR** environment variable to point to your favorite text editor. 
 It will be executed when editing contexts via *workon --edit*.
