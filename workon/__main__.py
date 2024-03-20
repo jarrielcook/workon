@@ -278,7 +278,7 @@ def main():
     
                     # Extract the working directory
                     try:
-                        workdir = actions['workdir'].split()
+                        workdir = actions['workdir']
                     except:
                         workdir = support_dir
     
@@ -297,7 +297,7 @@ def main():
                     try:
                         os.chdir(workdir)
                     except:
-                        os.chdir(cfg['context_dir'])
+                        os.chdir(support_dir)
     
                     # Spawn the command
                     spawnargs = tuple([command] + arguments)
